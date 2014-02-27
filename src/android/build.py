@@ -200,7 +200,7 @@ class PlatformTarget(object):
     def __repr__(self):
         return 'Platform %s <%s>' % (self.version, self.platform_dir)
 
-    def generate_r(self, manifest, resource_dir, output_dir):
+    def generate_r(self, manifest, resource_dir, output_dir, aapt_extra_args):
         """Generate the R.java file in ``output_dir``, based
         on ``resource_dir``.
 
@@ -216,7 +216,8 @@ class PlatformTarget(object):
             manifest=manifest,
             resource_dir=resource_dir,
             r_output=output_dir,
-            include=[self.framework_library]))
+            include=[self.framework_library],
+            extra_args = aapt_extra_args))
 
     def compile_renderscript(self, resource_dir, source_gen_dir, source_dirs):
         """
@@ -320,7 +321,7 @@ class PlatformTarget(object):
 
     def compile(self, manifest, project_dir, source_dirs, resource_dir,
                 source_gen_dir=None, class_gen_dir=None,
-                dex_output=None, extra_jars=[], **kwargs):
+                dex_output=None, extra_jars=[], aapt_extra_args =[], **kwargs):
         """Shortcut for the whole process until dexing into a code
         object that we can pack into an APK.
 
@@ -337,7 +338,7 @@ class PlatformTarget(object):
         try:
             source_dirs = as_list(source_dirs)
             self.compile_renderscript(resource_dir, source_gen_dir, source_dirs)
-            self.generate_r(manifest, resource_dir, source_gen_dir)
+            self.generate_r(manifest, resource_dir, source_gen_dir, aapt_extra_args)
             # TODO: check args for RS
             self.compile_aidl(source_dirs, source_gen_dir)
             if self.ndk_build is not None:
@@ -354,7 +355,8 @@ class PlatformTarget(object):
 
     def pack_resources(self, manifest, resource_dir, asset_dir=None,
                        configurations=None, package_name=None,
-                       version_code=None, version_name=None, output=None):
+                       version_code=None, version_name=None, output=None,
+                       aapt_extra_args=[]):
         """Package all the resource files.
 
         ``configurations`` may be a list of configuration values to be
@@ -380,7 +382,8 @@ class PlatformTarget(object):
             # There is no error code without overwrite, so
             # let's not even give the user the choice, it
             # would only cause confusion.
-            overwrite=True)
+            overwrite=True,
+            extra_args=aapt_extra_args)
         if asset_dir:
             kwargs['asset_dir'] = asset_dir
         log.info(self.aapt(**kwargs))
@@ -570,6 +573,7 @@ class AndroidProject(object):
         # Optional values
         self.extra_source_dirs = []
         self.extra_jars = []
+        self.aapt_extra_args = []
 
         # if no name is given, inspect the manifest
         self.name = name or self.manifest_parsed.attrib['package']
@@ -592,7 +596,8 @@ class AndroidProject(object):
             resource_dir=self.resource_dir,
             source_gen_dir=self.gen_dir,
             class_gen_dir=path.join(self.out_dir, 'classes'),
-            extra_jars=only_existing([self.lib_dir])+self.extra_jars
+            extra_jars=only_existing([self.lib_dir])+self.extra_jars,
+            aapt_extra_args = self.aapt_extra_args
         )
         self.code = self.platform.compile(**kwargs)
 
@@ -623,6 +628,7 @@ class AndroidProject(object):
             package_name=package_name,
             version_code=version_code,
             version_name=version_name,
+            aapt_extra_args=self.aapt_extra_args
         )
         if path.exists(self.asset_dir):
             kwargs.update({'asset_dir': self.asset_dir})

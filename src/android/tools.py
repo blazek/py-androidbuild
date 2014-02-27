@@ -108,7 +108,8 @@ class Aapt(Program):
                  r_output=None, configurations=None,
                  rename_manifest_package=None, overwrite_version_code=None,
                  overwrite_version_name=None,
-                 make_dirs=None, overwrite=None):
+                 make_dirs=None, overwrite=None,
+                 extra_args = []):
         """
         command
             The APPT command to execute.
@@ -133,6 +134,9 @@ class Aapt(Program):
 
         make_dirs
             Make package directories for ``r_output`` option (-m).
+
+        extra_args
+            List of extra arguments.
         """
 
         args = [command]
@@ -152,6 +156,7 @@ class Aapt(Program):
         self.extend_args(args, ['-F', apk_output])
         self.extend_args(args, ['-J', r_output])
         self.extend_args(args, ['-f'], overwrite)
+        self.extend_args(args, extra_args )
         return Program.__call__(self, args)
 
 
